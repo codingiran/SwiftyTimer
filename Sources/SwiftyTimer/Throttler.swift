@@ -55,7 +55,7 @@ open class Throttler {
     ///   - mode: operation mode, if not specified `fixed` is used instead.
     ///   - fireNow: immediate fire first execution of the throttle.
     ///   - callback: callback to throttle.
-    public init(time: SwiftyTimer.Interval, queue: DispatchQueue? = nil, mode: Mode = .fixed, immediateFire: Bool = false, _ callback: Callback? = nil) {
+    public init(time: Interval, queue: DispatchQueue? = nil, mode: Mode = .fixed, immediateFire: Bool = false, _ callback: Callback? = nil) {
         self.throttle = time.value
         self.queue = (queue ?? DispatchQueue.global(qos: .background))
         self.mode = mode

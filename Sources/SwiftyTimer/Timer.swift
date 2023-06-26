@@ -131,7 +131,7 @@ open class Timer: Equatable {
     public private(set) var remainingIterations: Int?
 
     /// Interval of the timer
-    private var interval: SwiftyTimer.Interval
+    private var interval: Interval
 
     /// Accuracy of the timer
     private var tolerance: DispatchTimeInterval
@@ -147,7 +147,7 @@ open class Timer: Equatable {
     ///   - tolerance: tolerance of the timer, 0 is default.
     ///   - queue: queue in which the timer should be executed; if `nil` a new queue is created automatically.
     ///   - observer: observer
-    public init(interval: SwiftyTimer.Interval, mode: Mode = .infinite, tolerance: DispatchTimeInterval = .nanoseconds(0), queue: DispatchQueue? = nil, observer: @escaping Observer) {
+    public init(interval: Interval, mode: Mode = .infinite, tolerance: DispatchTimeInterval = .nanoseconds(0), queue: DispatchQueue? = nil, observer: @escaping Observer) {
         self.mode = mode
         self.interval = interval
         self.tolerance = tolerance
@@ -231,7 +231,7 @@ open class Timer: Equatable {
     ///   - observer: handler to call when timer fires.
     /// - Returns: timer instance
     @discardableResult
-    public class func once(after interval: SwiftyTimer.Interval, tolerance: DispatchTimeInterval = .nanoseconds(0), queue: DispatchQueue? = nil, _ observer: @escaping Observer) -> Timer {
+    public class func once(after interval: Interval, tolerance: DispatchTimeInterval = .nanoseconds(0), queue: DispatchQueue? = nil, _ observer: @escaping Observer) -> Timer {
         let timer = Timer(interval: interval, mode: .once, tolerance: tolerance, queue: queue, observer: observer)
         timer.start()
         return timer
@@ -246,7 +246,7 @@ open class Timer: Equatable {
     ///   - handler: handler to call on fire
     /// - Returns: timer
     @discardableResult
-    public class func every(_ interval: SwiftyTimer.Interval, count: Int? = nil, tolerance: DispatchTimeInterval = .nanoseconds(0), queue: DispatchQueue? = nil, _ handler: @escaping Observer) -> Timer {
+    public class func every(_ interval: Interval, count: Int? = nil, tolerance: DispatchTimeInterval = .nanoseconds(0), queue: DispatchQueue? = nil, _ handler: @escaping Observer) -> Timer {
         let mode: Mode = (count != nil ? .finite(count!) : .infinite)
         let timer = Timer(interval: interval, mode: mode, tolerance: tolerance, queue: queue, observer: handler)
         timer.start()
@@ -268,7 +268,7 @@ open class Timer: Equatable {
     /// - Parameters:
     ///   - interval: new fire interval; pass `nil` to keep the latest interval set.
     ///   - restart: `true` to automatically restart the timer, `false` to keep it stopped after configuration.
-    public func reset(_ interval: SwiftyTimer.Interval?, restart: Bool = true) {
+    public func reset(_ interval: Interval?, restart: Bool = true) {
         if self.state.isRunning {
             self.setPause(from: self.state)
         }

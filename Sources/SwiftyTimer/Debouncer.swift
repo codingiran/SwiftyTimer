@@ -14,7 +14,7 @@ open class Debouncer {
     public typealias Callback = () -> Void
 
     /// Delay interval
-    public private(set) var delay: SwiftyTimer.Interval
+    public private(set) var delay: Interval
 
     /// Callback to activate
     public var callback: Callback?
@@ -28,7 +28,7 @@ open class Debouncer {
     /// - Parameters:
     ///   - delay: delay interval
     ///   - callback: callback to activate
-    public init(_ delay: SwiftyTimer.Interval, callback: Callback? = nil) {
+    public init(_ delay: Interval, callback: Callback? = nil) {
         self.delay = delay
         self.callback = callback
     }
@@ -38,7 +38,7 @@ open class Debouncer {
     ///
     /// - Parameters:
     ///   - newDelay: New delay interval
-    public func call(newDelay: SwiftyTimer.Interval? = nil) {
+    public func call(newDelay: Interval? = nil) {
         if let newDelay = newDelay {
             self.delay = newDelay
         }
