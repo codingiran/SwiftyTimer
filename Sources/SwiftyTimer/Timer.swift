@@ -75,7 +75,7 @@ open class Timer: Equatable {
         case once
 
         /// Is timer a repeating timer?
-        internal var isRepeating: Bool {
+        var isRepeating: Bool {
             switch self {
             case .once: return false
             default: return true
@@ -215,12 +215,10 @@ open class Timer: Equatable {
 
     /// Destroy current timer
     private func destroyTimer() {
-        self.timer?.setEventHandler(handler: nil)
         self.timer?.cancel()
-
-        if self.state == .paused || self.state == .finished {
-            self.timer?.resume()
-        }
+        self.resume()
+        self.timer?.setEventHandler(handler: nil)
+        self.timer = nil
     }
 
     /// Create and schedule a timer that will call `handler` once after the specified time.
@@ -287,8 +285,7 @@ open class Timer: Equatable {
         self.state = .paused
 
         if restart {
-            self.timer?.resume()
-            self.state = .running
+            self.resume()
         }
     }
 
@@ -302,8 +299,7 @@ open class Timer: Equatable {
         // If timer has not finished its lifetime we want simply
         // restart it from the current state.
         guard self.state.isFinished == true else {
-            self.state = .running
-            self.timer?.resume()
+            self.resume()
             return true
         }
 
@@ -335,7 +331,7 @@ open class Timer: Equatable {
             return false
         }
 
-        self.timer?.suspend()
+        self.suspend()
         self.state = newState
 
         return true
@@ -368,6 +364,22 @@ open class Timer: Equatable {
             // infinite timer does nothing special on the state machine
             break
         }
+    }
+
+    private func resume() {
+        if self.state == .running {
+            return
+        }
+        self.state = .running
+        self.timer?.resume()
+    }
+
+    private func suspend() {
+        if self.state == .paused || self.state == .finished {
+            return
+        }
+        self.state = .paused
+        self.timer?.suspend()
     }
 
     deinit {
