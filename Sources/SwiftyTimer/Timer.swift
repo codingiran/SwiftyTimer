@@ -215,9 +215,9 @@ open class Timer: Equatable {
 
     /// Destroy current timer
     private func destroyTimer() {
+        self.timer?.setEventHandler {}
         self.timer?.cancel()
         self.resume()
-        self.timer?.setEventHandler(handler: nil)
         self.timer = nil
     }
 
