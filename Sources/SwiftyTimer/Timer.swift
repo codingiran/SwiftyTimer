@@ -367,7 +367,7 @@ open class Timer: Equatable {
     }
 
     private func resume() {
-        if self.state == .running {
+        if self.state.isRunning {
             return
         }
         self.state = .running
