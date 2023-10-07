@@ -194,7 +194,7 @@ open class Timer: Equatable {
         self.observers.removeAll()
 
         if stopTimer {
-            self.suspend(to: .paused)
+            self.pause()
         }
     }
 
@@ -265,7 +265,7 @@ open class Timer: Equatable {
     public func fire(andPause pause: Bool = false) {
         self.timeFired()
         if pause {
-            self.suspend(to: .paused)
+            self.pause()
         }
     }
 
@@ -276,7 +276,7 @@ open class Timer: Equatable {
     ///   - restart: `true` to automatically restart the timer, `false` to keep it stopped after configuration.
     public func reset(_ interval: Interval?, restart: Bool = true) {
         // suspend timer
-        self.suspend(to: .paused)
+        self.pause()
 
         // For finite counter we want to also reset the repeat count
         if case .finite(let count) = self.mode {
@@ -316,6 +316,11 @@ open class Timer: Equatable {
         // and start it again.
         self.reset(nil, restart: true)
         return true
+    }
+
+    /// Pause timer. If timer is already running it does nothing.
+    public func pause() {
+        self.suspend(to: .paused)
     }
 
     /// Called when timer is fired
