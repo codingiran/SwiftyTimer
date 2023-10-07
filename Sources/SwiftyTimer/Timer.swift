@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import Locking
 
 open class Timer: Equatable {
     /// State of the timer
@@ -32,9 +33,15 @@ open class Timer: Equatable {
             }
         }
 
-        /// Return `true` if timer is currently running, including when the observers are being executed.
-        public var isRunning: Bool {
+        /// Return `true` if timer is currently resumed, including when the observers are being executed.
+        public var isResumed: Bool {
             guard self == .running || self == .executing else { return false }
+            return true
+        }
+
+        /// Return `true` if timer is currently suspended, including timer lifetime is finished.
+        public var isSuspended: Bool {
+            guard self == .paused || self == .finished else { return false }
             return true
         }
 
@@ -106,9 +113,9 @@ open class Timer: Equatable {
     public typealias ObserverToken = UInt64
 
     /// Current state of the timer
-    public private(set) var state: State = .paused {
+    public private(set) var state = Protected(State.paused) {
         didSet {
-            self.onStateChanged?(self, self.state)
+            self.onStateChanged?(self, self.state.value)
         }
     }
 
@@ -152,7 +159,7 @@ open class Timer: Equatable {
         self.interval = interval
         self.tolerance = tolerance
         self.remainingIterations = mode.countIterations
-        self.queue = (queue ?? DispatchQueue(label: "com.repeat.queue"))
+        self.queue = (queue ?? DispatchQueue(label: "com.swiftytimer.timer.queue"))
         self.timer = self.configureTimer()
         self.observe(observer)
     }
@@ -182,12 +189,12 @@ open class Timer: Equatable {
 
     /// Remove all observers of the timer.
     ///
-    /// - Parameter stopTimer: `true` to also stop timer by calling `pause()` function.
+    /// - Parameter stopTimer: `true` to also stop timer by calling `suspend()` function.
     public func removeAllObservers(thenStop stopTimer: Bool = false) {
         self.observers.removeAll()
 
         if stopTimer {
-            self.pause()
+            self.suspend(to: .paused)
         }
     }
 
@@ -195,7 +202,7 @@ open class Timer: Equatable {
     ///
     /// - Returns: dispatch timer
     private func configureTimer() -> DispatchSourceTimer {
-        let associatedQueue = (queue ?? DispatchQueue(label: "com.repeat.\(NSUUID().uuidString)"))
+        let associatedQueue = (queue ?? DispatchQueue(label: "com.swiftytimer.timer.\(UUID().uuidString)"))
         let timer = DispatchSource.makeTimerSource(queue: associatedQueue)
         let repeatInterval = self.interval.value
         let deadline: DispatchTime = (DispatchTime.now() + repeatInterval)
@@ -206,19 +213,20 @@ open class Timer: Equatable {
         }
 
         timer.setEventHandler { [weak self] in
-            if let unwrapped = self {
-                unwrapped.timeFired()
-            }
+            guard let self else { return }
+            self.timeFired()
         }
         return timer
     }
 
     /// Destroy current timer
     private func destroyTimer() {
-        self.timer?.setEventHandler {}
-        self.timer?.cancel()
+        guard let timer = self.timer else {
+            return
+        }
+        timer.setEventHandler {}
+        timer.cancel()
         self.resume()
-        self.timer = nil
     }
 
     /// Create and schedule a timer that will call `handler` once after the specified time.
@@ -256,8 +264,8 @@ open class Timer: Equatable {
     /// - Parameter pause: `true` to pause after fire, `false` to continue the regular firing schedule.
     public func fire(andPause pause: Bool = false) {
         self.timeFired()
-        if pause == true {
-            self.pause()
+        if pause {
+            self.suspend(to: .paused)
         }
     }
 
@@ -267,9 +275,8 @@ open class Timer: Equatable {
     ///   - interval: new fire interval; pass `nil` to keep the latest interval set.
     ///   - restart: `true` to automatically restart the timer, `false` to keep it stopped after configuration.
     public func reset(_ interval: Interval?, restart: Bool = true) {
-        if self.state.isRunning {
-            self.setPause(from: self.state)
-        }
+        // suspend timer
+        self.suspend(to: .paused)
 
         // For finite counter we want to also reset the repeat count
         if case .finite(let count) = self.mode {
@@ -282,7 +289,7 @@ open class Timer: Equatable {
         } // update interval
         self.destroyTimer()
         self.timer = self.configureTimer()
-        self.state = .paused
+        self.state.value = .paused
 
         if restart {
             self.resume()
@@ -292,13 +299,15 @@ open class Timer: Equatable {
     /// Start timer. If timer is already running it does nothing.
     @discardableResult
     public func start() -> Bool {
-        guard self.state.isRunning == false else {
+        let state = self.state.value
+
+        guard !state.isResumed else {
             return false
         }
 
         // If timer has not finished its lifetime we want simply
         // restart it from the current state.
-        guard self.state.isFinished == true else {
+        guard state.isFinished else {
             self.resume()
             return true
         }
@@ -309,37 +318,9 @@ open class Timer: Equatable {
         return true
     }
 
-    /// Pause a running timer. If timer is paused it does nothing.
-    @discardableResult
-    public func pause() -> Bool {
-        guard self.state != .paused && self.state != .finished else {
-            return false
-        }
-
-        return self.setPause(from: self.state)
-    }
-
-    /// Pause a running timer optionally changing the state with regard to the current state.
-    ///
-    /// - Parameters:
-    ///   - from: the state which the timer should only be paused if it is the current state
-    ///   - to: the new state to change to if the timer is paused
-    /// - Returns: `true` if timer is paused
-    @discardableResult
-    private func setPause(from currentState: State, to newState: State = .paused) -> Bool {
-        guard self.state == currentState else {
-            return false
-        }
-
-        self.suspend()
-        self.state = newState
-
-        return true
-    }
-
     /// Called when timer is fired
     private func timeFired() {
-        self.state = .executing
+        self.state.value = .executing
 
         if case .finite = self.mode {
             self.remainingIterations! -= 1
@@ -353,12 +334,12 @@ open class Timer: Equatable {
         case .once:
             // once timer's lifetime is finished after the first fire
             // you can reset it by calling `reset()` function.
-            self.setPause(from: .executing, to: .finished)
+            self.suspend(to: .finished)
         case .finite:
             // for finite intervals we decrement the left iterations count...
             if self.remainingIterations! == 0 {
                 // ...if left count is zero we just pause the timer and stop
-                self.setPause(from: .executing, to: .finished)
+                self.suspend(to: .finished)
             }
         case .infinite:
             // infinite timer does nothing special on the state machine
@@ -366,20 +347,26 @@ open class Timer: Equatable {
         }
     }
 
+    /// resume timer with lock
     private func resume() {
-        if self.state.isRunning {
-            return
+        self.state.sync { state in
+            guard !state.isResumed else {
+                return
+            }
+            self.timer?.resume()
+            state = .running
         }
-        self.state = .running
-        self.timer?.resume()
     }
 
-    private func suspend() {
-        if self.state == .paused || self.state == .finished {
-            return
+    /// suspend timer with lock
+    private func suspend(to newState: State) {
+        self.state.sync { state in
+            guard !state.isSuspended else {
+                return
+            }
+            self.timer?.suspend()
+            state = newState
         }
-        self.state = .paused
-        self.timer?.suspend()
     }
 
     deinit {

@@ -12,8 +12,8 @@ import Foundation
 #error("SwiftyTimer doesn't support Swift versions below 5.5.")
 #endif
 
-/// Current SwiftyTimer version. Necessary since SPM doesn't use dynamic libraries. Plus this will be more accurate.
-let version = "1.0.0"
+/// Current SwiftyTimer version 1.0.1. Necessary since SPM doesn't use dynamic libraries. Plus this will be more accurate.
+let version = "1.0.1"
 
 public enum Interval {
     case nanoseconds(_: Int)
@@ -24,7 +24,7 @@ public enum Interval {
     case hours(_: Int)
     case days(_: Int)
 
-    internal var value: DispatchTimeInterval {
+    var value: DispatchTimeInterval {
         switch self {
         case .nanoseconds(let value): return .nanoseconds(value)
         case .microseconds(let value): return .microseconds(value)

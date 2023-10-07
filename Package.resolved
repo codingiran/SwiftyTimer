@@ -1,0 +1,14 @@
+{
+  "pins" : [
+    {
+      "identity" : "locking",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/codingiran/Locking.git",
+      "state" : {
+        "revision" : "62827f93297bc860df1b0532b06173c64facaa22",
+        "version" : "0.0.1"
+      }
+    }
+  ],
+  "version" : 2
+}

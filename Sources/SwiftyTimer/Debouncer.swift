@@ -43,7 +43,9 @@ open class Debouncer {
             self.delay = newDelay
         }
 
-        if self.timer == nil {
+        if let timer = self.timer {
+            timer.reset(self.delay, restart: true)
+        } else {
             self.timer = Timer.once(after: self.delay) { [weak self] _ in
                 guard let callback = self?.callback else {
                     debugPrint("Debouncer fired but callback not set.")
@@ -51,8 +53,6 @@ open class Debouncer {
                 }
                 callback()
             }
-        } else {
-            self.timer?.reset(self.delay, restart: true)
         }
     }
 }
