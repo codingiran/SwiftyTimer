@@ -220,13 +220,10 @@ open class Timer: Equatable {
     }
 
     /// Destroy current timer
-    private func destroyTimer() {
-        guard let timer = self.timer else {
-            return
-        }
-        timer.setEventHandler {}
-        timer.cancel()
-        self.resume()
+    private func destroyTimer(currentState: inout State) {
+        self.resume(currentState: &currentState)
+        self.timer?.setEventHandler {}
+        self.timer?.cancel()
     }
 
     /// Create and schedule a timer that will call `handler` once after the specified time.
@@ -275,8 +272,91 @@ open class Timer: Equatable {
     ///   - interval: new fire interval; pass `nil` to keep the latest interval set.
     ///   - restart: `true` to automatically restart the timer, `false` to keep it stopped after configuration.
     public func reset(_ interval: Interval?, restart: Bool = true) {
+        self.state.sync { state in
+            self.reset(currentState: &state, interval: interval, restart: restart)
+        }
+    }
+
+    /// Start timer. If timer is already running it does nothing.
+    public func start() {
+        self.state.sync { state in
+            guard !state.isResumed else {
+                return
+            }
+
+            // If timer has not finished its lifetime we want simply
+            // restart it from the current state.
+            guard state.isFinished else {
+                self.resume(currentState: &state)
+                return
+            }
+
+            // Otherwise we need to reset the state based upon the mode
+            // and start it again.
+            self.reset(currentState: &state, interval: nil, restart: true)
+        }
+    }
+
+    /// Pause timer. If timer is already running it does nothing.
+    public func pause() {
+        self.state.sync { state in
+            self.suspend(currentState: &state, to: .paused)
+        }
+    }
+
+    /// Called when timer is fired
+    private func timeFired() {
+        self.state.sync { state in
+            state = .executing
+
+            if case .finite = self.mode {
+                self.remainingIterations! -= 1
+            }
+
+            // dispatch to observers
+            self.observers.values.forEach { $0(self) }
+
+            // manage lifetime
+            switch self.mode {
+            case .once:
+                // once timer's lifetime is finished after the first fire
+                // you can reset it by calling `reset()` function.
+                self.suspend(currentState: &state, to: .finished)
+            case .finite:
+                // for finite intervals we decrement the left iterations count...
+                if self.remainingIterations! == 0 {
+                    // ...if left count is zero we just pause the timer and stop
+                    self.suspend(currentState: &state, to: .finished)
+                }
+            case .infinite:
+                // infinite timer does nothing special on the state machine
+                break
+            }
+        }
+    }
+
+    /// resume timer
+    private func resume(currentState: inout State) {
+        guard !currentState.isResumed else {
+            return
+        }
+        self.timer?.resume()
+        currentState = .running
+    }
+
+    /// suspend timer
+    private func suspend(currentState: inout State, to newState: State) {
+        guard !currentState.isSuspended else {
+            return
+        }
+        self.timer?.suspend()
+        currentState = newState
+    }
+
+    /// restart timer
+    private func reset(currentState: inout State, interval: Interval?, restart: Bool = true) {
         // suspend timer
-        self.pause()
+        self.suspend(currentState: &currentState, to: .paused)
 
         // For finite counter we want to also reset the repeat count
         if case .finite(let count) = self.mode {
@@ -287,96 +367,20 @@ open class Timer: Equatable {
         if let newInterval = interval {
             self.interval = newInterval
         } // update interval
-        self.destroyTimer()
+        self.destroyTimer(currentState: &currentState)
         self.timer = self.configureTimer()
-        self.state.value = .paused
+        currentState = .paused
 
         if restart {
-            self.resume()
-        }
-    }
-
-    /// Start timer. If timer is already running it does nothing.
-    @discardableResult
-    public func start() -> Bool {
-        let state = self.state.value
-
-        guard !state.isResumed else {
-            return false
-        }
-
-        // If timer has not finished its lifetime we want simply
-        // restart it from the current state.
-        guard state.isFinished else {
-            self.resume()
-            return true
-        }
-
-        // Otherwise we need to reset the state based upon the mode
-        // and start it again.
-        self.reset(nil, restart: true)
-        return true
-    }
-
-    /// Pause timer. If timer is already running it does nothing.
-    public func pause() {
-        self.suspend(to: .paused)
-    }
-
-    /// Called when timer is fired
-    private func timeFired() {
-        self.state.value = .executing
-
-        if case .finite = self.mode {
-            self.remainingIterations! -= 1
-        }
-
-        // dispatch to observers
-        self.observers.values.forEach { $0(self) }
-
-        // manage lifetime
-        switch self.mode {
-        case .once:
-            // once timer's lifetime is finished after the first fire
-            // you can reset it by calling `reset()` function.
-            self.suspend(to: .finished)
-        case .finite:
-            // for finite intervals we decrement the left iterations count...
-            if self.remainingIterations! == 0 {
-                // ...if left count is zero we just pause the timer and stop
-                self.suspend(to: .finished)
-            }
-        case .infinite:
-            // infinite timer does nothing special on the state machine
-            break
-        }
-    }
-
-    /// resume timer with lock
-    private func resume() {
-        self.state.sync { state in
-            guard !state.isResumed else {
-                return
-            }
-            self.timer?.resume()
-            state = .running
-        }
-    }
-
-    /// suspend timer with lock
-    private func suspend(to newState: State) {
-        self.state.sync { state in
-            guard !state.isSuspended else {
-                return
-            }
-            self.timer?.suspend()
-            state = newState
+            self.resume(currentState: &currentState)
         }
     }
 
     deinit {
-        self.observers.removeAll()
-        self.destroyTimer()
+        self.state.sync { state in
+            self.observers.removeAll()
+            self.destroyTimer(currentState: &state)
+        }
     }
 
     public static func == (lhs: Timer, rhs: Timer) -> Bool {
