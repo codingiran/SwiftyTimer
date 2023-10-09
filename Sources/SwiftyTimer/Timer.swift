@@ -224,6 +224,7 @@ open class Timer: Equatable {
         self.resume(currentState: &currentState)
         self.timer?.setEventHandler {}
         self.timer?.cancel()
+        self.timer = nil
     }
 
     /// Create and schedule a timer that will call `handler` once after the specified time.
@@ -337,24 +338,33 @@ open class Timer: Equatable {
 
     /// resume timer
     private func resume(currentState: inout State) {
+        defer {
+            currentState = .running
+        }
         guard !currentState.isResumed else {
             return
         }
         self.timer?.resume()
-        currentState = .running
     }
 
     /// suspend timer
+    /// - Parameters:
+    ///   - currentState: current timer state
+    ///   - newState: current timer state,  must be .paused or .finished
     private func suspend(currentState: inout State, to newState: State) {
+        defer {
+            if newState.isSuspended {
+                currentState = newState
+            }
+        }
         guard !currentState.isSuspended else {
             return
         }
         self.timer?.suspend()
-        currentState = newState
     }
 
     /// restart timer
-    private func reset(currentState: inout State, interval: Interval?, restart: Bool = true) {
+    private func reset(currentState: inout State, interval: Interval?, restart: Bool) {
         // suspend timer
         self.suspend(currentState: &currentState, to: .paused)
 
@@ -363,10 +373,12 @@ open class Timer: Equatable {
             self.remainingIterations = count
         }
 
-        // Create a new instance of timer configured
+        // update interval
         if let newInterval = interval {
             self.interval = newInterval
-        } // update interval
+        }
+
+        // Create a new instance of timer configured
         self.destroyTimer(currentState: &currentState)
         self.timer = self.configureTimer()
         currentState = .paused
