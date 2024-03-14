@@ -28,6 +28,7 @@ let package = Package(
             dependencies: [
                 "Locking",
             ],
-            path: "Sources"),
+            path: "Sources",
+            resources: [.copy("Resources/PrivacyInfo.xcprivacy")]),
     ],
     swiftLanguageVersions: [.v5])
