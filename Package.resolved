@@ -5,8 +5,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/codingiran/Locking.git",
       "state" : {
-        "revision" : "62827f93297bc860df1b0532b06173c64facaa22",
-        "version" : "0.0.1"
+        "revision" : "a268a3da43bf3295a8fd4e403cf1c57d2ccad0c8",
+        "version" : "0.0.3"
       }
     }
   ],

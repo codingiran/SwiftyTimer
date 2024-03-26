@@ -115,7 +115,7 @@ open class Timer: Equatable {
     /// Current state of the timer
     public private(set) var state = Protected(State.paused) {
         didSet {
-            self.onStateChanged?(self, self.state.value)
+            onStateChanged?(self, state.value)
         }
     }
 
@@ -128,8 +128,8 @@ open class Timer: Equatable {
     /// Next token of the timer
     private var nextObserverID: UInt64 = 0
 
-    /// Internal GCD Timer
-    private var timer: DispatchSourceTimer?
+    /// Internal Safe GCD Timer
+    private var timer: SafeDispatchSourceTimer?
 
     /// Is timer a repeat timer
     public private(set) var mode: Mode
@@ -158,10 +158,10 @@ open class Timer: Equatable {
         self.mode = mode
         self.interval = interval
         self.tolerance = tolerance
-        self.remainingIterations = mode.countIterations
+        remainingIterations = mode.countIterations
         self.queue = (queue ?? DispatchQueue(label: "com.swiftytimer.timer.queue"))
-        self.timer = self.configureTimer()
-        self.observe(observer)
+        timer = configureTimer()
+        observe(observer)
     }
 
     /// Add new a listener to the timer.
@@ -170,13 +170,13 @@ open class Timer: Equatable {
     /// - Returns: token used to remove the handler
     @discardableResult
     public func observe(_ observer: @escaping Observer) -> ObserverToken {
-        var (new, overflow) = self.nextObserverID.addingReportingOverflow(1)
+        var (new, overflow) = nextObserverID.addingReportingOverflow(1)
         if overflow { // you need to add an incredible number of offset...sure you can't
-            self.nextObserverID = 0
+            nextObserverID = 0
             new = 0
         }
-        self.nextObserverID = new
-        self.observers[new] = observer
+        nextObserverID = new
+        observers[new] = observer
         return new
     }
 
@@ -184,32 +184,32 @@ open class Timer: Equatable {
     ///
     /// - Parameter id: id of the observer to remove
     public func remove(observer identifier: ObserverToken) {
-        self.observers.removeValue(forKey: identifier)
+        observers.removeValue(forKey: identifier)
     }
 
     /// Remove all observers of the timer.
     ///
     /// - Parameter stopTimer: `true` to also stop timer by calling `suspend()` function.
     public func removeAllObservers(thenStop stopTimer: Bool = false) {
-        self.observers.removeAll()
+        observers.removeAll()
 
         if stopTimer {
-            self.pause()
+            pause()
         }
     }
 
     /// Configure a new timer session.
     ///
     /// - Returns: dispatch timer
-    private func configureTimer() -> DispatchSourceTimer {
+    private func configureTimer() -> SafeDispatchSourceTimer {
         let associatedQueue = (queue ?? DispatchQueue(label: "com.swiftytimer.timer.\(UUID().uuidString)"))
-        let timer = DispatchSource.makeTimerSource(queue: associatedQueue)
-        let repeatInterval = self.interval.value
+        let timer = DispatchSource.makeSafeTimerSource(queue: associatedQueue)
+        let repeatInterval = interval.value
         let deadline: DispatchTime = (DispatchTime.now() + repeatInterval)
-        if self.mode.isRepeating {
-            timer.schedule(deadline: deadline, repeating: repeatInterval, leeway: self.tolerance)
+        if mode.isRepeating {
+            timer.schedule(deadline: deadline, repeating: repeatInterval, leeway: tolerance)
         } else {
-            timer.schedule(deadline: deadline, leeway: self.tolerance)
+            timer.schedule(deadline: deadline, leeway: tolerance)
         }
 
         timer.setEventHandler { [weak self] in
@@ -221,10 +221,10 @@ open class Timer: Equatable {
 
     /// Destroy current timer
     private func destroyTimer(currentState: inout State) {
-        self.resume(currentState: &currentState)
-        self.timer?.setEventHandler {}
-        self.timer?.cancel()
-        self.timer = nil
+        resume(currentState: &currentState)
+        timer?.setEventHandler {}
+        timer?.cancel()
+        timer = nil
     }
 
     /// Create and schedule a timer that will call `handler` once after the specified time.
@@ -261,7 +261,7 @@ open class Timer: Equatable {
     ///
     /// - Parameter pause: `true` to pause after fire, `false` to continue the regular firing schedule.
     public func fire(andPause pause: Bool = false) {
-        self.timeFired()
+        timeFired()
         if pause {
             self.pause()
         }
@@ -273,14 +273,14 @@ open class Timer: Equatable {
     ///   - interval: new fire interval; pass `nil` to keep the latest interval set.
     ///   - restart: `true` to automatically restart the timer, `false` to keep it stopped after configuration.
     public func reset(_ interval: Interval?, restart: Bool = true) {
-        self.state.sync { state in
+        state.sync { state in
             self.reset(currentState: &state, interval: interval, restart: restart)
         }
     }
 
     /// Start timer. If timer is already running it does nothing.
     public func start() {
-        self.state.sync { state in
+        state.sync { state in
             guard !state.isResumed else {
                 return
             }
@@ -300,14 +300,14 @@ open class Timer: Equatable {
 
     /// Pause timer. If timer is already running it does nothing.
     public func pause() {
-        self.state.sync { state in
+        state.sync { state in
             self.suspend(currentState: &state, to: .paused)
         }
     }
 
     /// Called when timer is fired
     private func timeFired() {
-        self.state.sync { state in
+        state.sync { state in
             state = .executing
 
             if case .finite = self.mode {
@@ -344,7 +344,7 @@ open class Timer: Equatable {
         guard !currentState.isResumed else {
             return
         }
-        self.timer?.resume()
+        timer?.resume()
     }
 
     /// suspend timer
@@ -360,17 +360,17 @@ open class Timer: Equatable {
         guard !currentState.isSuspended else {
             return
         }
-        self.timer?.suspend()
+        timer?.suspend()
     }
 
     /// restart timer
     private func reset(currentState: inout State, interval: Interval?, restart: Bool) {
         // suspend timer
-        self.suspend(currentState: &currentState, to: .paused)
+        suspend(currentState: &currentState, to: .paused)
 
         // For finite counter we want to also reset the repeat count
-        if case .finite(let count) = self.mode {
-            self.remainingIterations = count
+        if case .finite(let count) = mode {
+            remainingIterations = count
         }
 
         // update interval
@@ -379,12 +379,12 @@ open class Timer: Equatable {
         }
 
         // Create a new instance of timer configured
-        self.destroyTimer(currentState: &currentState)
-        self.timer = self.configureTimer()
+        destroyTimer(currentState: &currentState)
+        timer = configureTimer()
         currentState = .paused
 
         if restart {
-            self.resume(currentState: &currentState)
+            resume(currentState: &currentState)
         }
     }
 
