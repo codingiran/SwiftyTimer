@@ -12,8 +12,8 @@ import Foundation
 #error("SwiftyTimer doesn't support Swift versions below 5.5.")
 #endif
 
-/// Current SwiftyTimer version 2.0.3. Necessary since SPM doesn't use dynamic libraries. Plus this will be more accurate.
-let version = "2.0.3"
+/// Current SwiftyTimer version 2.0.4. Necessary since SPM doesn't use dynamic libraries. Plus this will be more accurate.
+let version = "2.0.4"
 
 public enum Interval {
     case nanoseconds(_: Int)
