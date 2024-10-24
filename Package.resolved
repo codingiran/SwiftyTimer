@@ -1,4 +1,5 @@
 {
+  "originHash" : "b159eccfd29526184341bcaa2aa4ce95886645c1032a8f2b0bddf1ffd173a0fb",
   "pins" : [
     {
       "identity" : "locking",
@@ -10,5 +11,5 @@
       }
     }
   ],
-  "version" : 2
+  "version" : 3
 }

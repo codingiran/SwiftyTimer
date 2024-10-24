@@ -12,8 +12,8 @@ import Foundation
 #error("SwiftyTimer doesn't support Swift versions below 5.5.")
 #endif
 
-/// Current SwiftyTimer version 2.0.2. Necessary since SPM doesn't use dynamic libraries. Plus this will be more accurate.
-let version = "2.0.2"
+/// Current SwiftyTimer version 2.0.3. Necessary since SPM doesn't use dynamic libraries. Plus this will be more accurate.
+let version = "2.0.3"
 
 public enum Interval {
     case nanoseconds(_: Int)
@@ -49,7 +49,7 @@ extension Interval: Hashable {
     }
 }
 
-extension DispatchTimeInterval: Hashable {
+extension DispatchTimeInterval: @retroactive Hashable {
     public func hash(into hasher: inout Hasher) {
         switch self {
         case .nanoseconds(let value):
