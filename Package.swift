@@ -10,6 +10,7 @@ let package = Package(
         .macOS(.v10_15),
         .tvOS(.v13),
         .watchOS(.v6),
+        .visionOS(.v1),
     ],
     products: [
         // Products define the executables and libraries a package produces, and make them visible to other packages.
@@ -18,7 +19,7 @@ let package = Package(
             targets: ["SwiftyTimer"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/codingiran/Locking.git", .upToNextMajor(from: "0.0.3")),
+        .package(url: "https://github.com/codingiran/Locking.git", .upToNextMajor(from: "0.0.4")),
     ],
     targets: [
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
