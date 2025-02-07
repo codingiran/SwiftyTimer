@@ -9,9 +9,9 @@ import Foundation
 
 /// The Debouncer will delay a function call, and every time it's getting called it will
 /// delay the preceding call until the delay time is over.
-open class Debouncer {
+open class Debouncer: @unchecked Sendable {
     /// Typealias for callback type
-    public typealias Callback = () -> Void
+    public typealias Callback = @Sendable () -> Void
 
     /// Delay interval
     public private(set) var delay: Interval

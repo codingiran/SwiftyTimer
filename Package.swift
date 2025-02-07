@@ -19,7 +19,7 @@ let package = Package(
             targets: ["SwiftyTimer"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/codingiran/Locking.git", .upToNextMajor(from: "0.0.4")),
+        .package(url: "https://github.com/codingiran/Locking.git", .upToNextMajor(from: "0.0.5")),
     ],
     targets: [
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
@@ -31,5 +31,4 @@ let package = Package(
             ],
             path: "Sources",
             resources: [.copy("Resources/PrivacyInfo.xcprivacy")]),
-    ],
-    swiftLanguageVersions: [.v5])
+    ])

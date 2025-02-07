@@ -11,7 +11,7 @@ import Foundation
 /// https://developer.apple.com/documentation/dispatch/1452801-dispatch_suspend
 /// https://developer.apple.com/documentation/dispatch/1452929-dispatch_resume
 /// https://developer.apple.com/documentation/dispatch/1385604-dispatch_source_cancel
-open class SafeDispatchSourceTimer {
+open class SafeDispatchSourceTimer: @unchecked Sendable {
     /// The type of block to submit to a dispatch source object.
     public typealias DispatchSourceHandler = @convention(block) () -> Void
 
