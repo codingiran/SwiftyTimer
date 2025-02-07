@@ -7,15 +7,15 @@
 
 import Foundation
 
-open class Throttler {
+open class Throttler: @unchecked Sendable {
     /// Callback type
-    public typealias Callback = () -> Void
+    public typealias Callback = @Sendable () -> Void
 
     /// Behaviour mode of the throttler.
     ///
     /// - fixed: When execution is available, dispatcher will try to keep fire on a fixed rate.
     /// - deferred: When execution is provided the dispatcher will always delay invocation.
-    public enum Mode {
+    public enum Mode: Sendable {
         case fixed
         case deferred
     }

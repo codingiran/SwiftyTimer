@@ -1,13 +1,13 @@
 {
-  "originHash" : "29c476a2695fdec4a434004221362ecefdf8413f5a80feb6bf580461baa5449a",
+  "originHash" : "8752d72b742442af3934bf76f4fef3459271460f5822eed93e636efee5e1c08d",
   "pins" : [
     {
       "identity" : "locking",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/codingiran/Locking.git",
       "state" : {
-        "revision" : "767e28c75308269c403c6795db148fc78a5b420d",
-        "version" : "0.0.4"
+        "revision" : "258222bf57c97b869bc032b68648b15e238452da",
+        "version" : "0.0.5"
       }
     }
   ],

@@ -8,14 +8,14 @@
 import Foundation
 import Locking
 
-open class Timer: Equatable {
+open class Timer: Equatable, @unchecked Sendable {
     /// State of the timer
     ///
     /// - paused: idle (never started yet or paused)
     /// - running: timer is running
     /// - executing: the observers are being executed
     /// - finished: timer lifetime is finished
-    public enum State: Equatable, CustomStringConvertible {
+    public enum State: Equatable, CustomStringConvertible, Sendable {
         case paused
         case running
         case executing
@@ -76,7 +76,7 @@ open class Timer: Equatable {
     /// - infinite: infinite number of repeats.
     /// - finite: finite number of repeats.
     /// - once: single repeat.
-    public enum Mode {
+    public enum Mode: Sendable {
         case infinite
         case finite(_: Int)
         case once
@@ -107,7 +107,7 @@ open class Timer: Equatable {
     }
 
     /// Handler typealias
-    public typealias Observer = (Timer) -> Void
+    public typealias Observer = @Sendable (Timer) -> Void
 
     /// Token assigned to the observer
     public typealias ObserverToken = UInt64
